@@ -1,54 +1,35 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { BodyMeasurements } from '@/types';
-import {
-  MEASUREMENT_RANGES,
-  SIZE_PRESETS,
-  validateMeasurement,
-  getDefaultMeasurements,
-  saveMeasurements,
-  loadMeasurements,
-} from '@/lib/measurements';
+import { BodyMeasurements, SizePreset } from '@/types';
+import { MEASUREMENT_RANGES } from '@/lib/measurements';
+import { useMeasurements } from '@/context/MeasurementContext';
 
 interface MeasurementFormProps {
-  onMeasurementsChange: (measurements: BodyMeasurements) => void;
+  onMeasurementsChange?: (measurements: BodyMeasurements) => void;
 }
 
-export default function MeasurementForm({ onMeasurementsChange }: MeasurementFormProps) {
-  const [measurements, setMeasurements] = useState<BodyMeasurements>(getDefaultMeasurements());
-
-  useEffect(() => {
-    const loaded = loadMeasurements();
-    if (loaded) {
-      setMeasurements(loaded);
-      onMeasurementsChange(loaded);
-    } else {
-      onMeasurementsChange(measurements);
-    }
-  }, []);
+export default function MeasurementForm({ onMeasurementsChange }: MeasurementFormProps = {}) {
+  const { measurements, setMeasurement, applyPreset, resetMeasurements, presets } = useMeasurements();
 
   const handleChange = (field: keyof BodyMeasurements, value: string) => {
     const numValue = parseFloat(value);
-    if (!isNaN(numValue) && validateMeasurement(field, numValue)) {
-      const updated = { ...measurements, [field]: numValue };
-      setMeasurements(updated);
-      saveMeasurements(updated);
-      onMeasurementsChange(updated);
+    if (!isNaN(numValue)) {
+      setMeasurement(field, numValue);
+      if (onMeasurementsChange) {
+        onMeasurementsChange({ ...measurements, [field]: numValue });
+      }
     }
   };
 
-  const applyPreset = (preset: typeof SIZE_PRESETS[0]) => {
-    setMeasurements(preset.measurements);
-    saveMeasurements(preset.measurements);
-    onMeasurementsChange(preset.measurements);
+  const handleApplyPreset = (preset: SizePreset) => {
+    applyPreset(preset);
+    if (onMeasurementsChange) {
+      onMeasurementsChange(preset.measurements);
+    }
   };
 
-  const resetToDefaults = () => {
-    const defaults = getDefaultMeasurements();
-    setMeasurements(defaults);
-    saveMeasurements(defaults);
-    onMeasurementsChange(defaults);
+  const handleReset = () => {
+    resetMeasurements();
   };
 
   const fields: Array<{ key: keyof BodyMeasurements; label: string; unit: string }> = [
@@ -66,17 +47,17 @@ export default function MeasurementForm({ onMeasurementsChange }: MeasurementFor
 
       {/* Size Presets */}
       <div className="flex gap-2">
-        {SIZE_PRESETS.map((preset) => (
+        {presets.map((preset) => (
           <button
             key={preset.name}
-            onClick={() => applyPreset(preset)}
+            onClick={() => handleApplyPreset(preset)}
             className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors"
           >
             {preset.name}
           </button>
         ))}
         <button
-          onClick={resetToDefaults}
+          onClick={handleReset}
           className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded transition-colors ml-auto"
         >
           Reset
